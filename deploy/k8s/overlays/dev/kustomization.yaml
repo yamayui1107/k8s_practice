@@ -18,10 +18,10 @@ patches:
         value: 1
 images:
   - name: your-registry/todo-app
-    newName: your-registry/todo-app
+    newName: ghcr.io/yamayui1107/todo-app
     newTag: latest
   - name: your-registry/todo-web
-    newName: your-registry/todo-web
+    newName: ghcr.io/yamayui1107/todo-web
     newTag: latest
 secretGenerator:
   - name: db-secret

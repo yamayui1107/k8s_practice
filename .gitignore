@@ -81,3 +81,5 @@ $RECYCLE.BIN/
 *.class
 hs_err_pid*
 replay_pid*
+
+ghcr-pull
