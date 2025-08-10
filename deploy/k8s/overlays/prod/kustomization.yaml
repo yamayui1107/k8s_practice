@@ -1,0 +1,31 @@
+namespace: todo
+resources:
+  - ../../base
+patches:
+  - target:
+      kind: Deployment
+      name: app
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Deployment
+      name: web
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+images:
+  - name: your-registry/todo-app
+    newName: your-registry/todo-app
+    newTag: v1.0.0
+  - name: your-registry/todo-web
+    newName: your-registry/todo-web
+    newTag: v1.0.0
+secretGenerator:
+  - name: db-secret
+    envs:
+      - secret.env
+generatorOptions:
+  disableNameSuffixHash: true 

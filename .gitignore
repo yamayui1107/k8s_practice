@@ -1,0 +1,83 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+# OS / Editor artifacts
+.DS_Store
+Thumbs.db
+
+# Environment files (do NOT commit real secrets)
+.env
+docker/.env
+deploy/k8s/overlays/**/secret.env
+# allow example templates
+!.env.example
+!**/*.env.example
+
+# Logs
+*.log
+logs/
+
+# Maven / Gradle build outputs
+**/target/
+**/build/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Maven wrapper cache
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper-downloader.jar
+.mvn/wrapper/*.zip
+
+# IDE/project files
+*.swp
+*.swo
+
+# Node (念のため)
+node_modules/
+
+# Docker
+*.pid
+**/.env
+**/.dockerignore.local
+
+# Kubernetes generated files (env/secret)
+**/secret.env
+
+# OS
+ehthumbs.db
+Icon?
+Desktop.ini
+$RECYCLE.BIN/
+
+# Java
+*.class
+hs_err_pid*
+replay_pid*

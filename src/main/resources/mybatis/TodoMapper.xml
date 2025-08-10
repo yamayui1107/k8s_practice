@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.practice.k8s.todo.infrastructure.persistence.mybatis.TodoMapper">
+
+    <resultMap id="TodoResultMap" type="com.practice.k8s.todo.domain.model.Todo">
+        <id     property="id"         column="id" />
+        <result property="title"      column="title" />
+        <result property="description" column="description" />
+        <result property="status"     column="status" javaType="com.practice.k8s.todo.domain.model.TodoStatus" />
+        <result property="dueDate"    column="due_date" />
+        <result property="createdAt"  column="created_at" />
+        <result property="updatedAt"  column="updated_at" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, title, description, status, due_date, created_at, updated_at
+    </sql>
+
+    <select id="selectById" parameterType="long" resultMap="TodoResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM todos
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectAll" resultMap="TodoResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM todos
+        ORDER BY id DESC
+    </select>
+
+    <insert id="insert" parameterType="com.practice.k8s.todo.domain.model.Todo" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO todos (
+            title, description, status, due_date, created_at, updated_at
+        ) VALUES (
+            #{title}, #{description}, #{status}, #{dueDate}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.practice.k8s.todo.domain.model.Todo">
+        UPDATE todos
+        SET
+            title = #{title},
+            description = #{description},
+            status = #{status},
+            due_date = #{dueDate},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM todos WHERE id = #{id}
+    </delete>
+</mapper> 

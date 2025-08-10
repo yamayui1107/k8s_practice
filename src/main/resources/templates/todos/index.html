@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TODOs</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 2rem; }
+    h1 { font-weight: 600; }
+    form, table { max-width: 900px; width: 100%; }
+    input, textarea { width: 100%; padding: .5rem; margin: .25rem 0 .75rem; }
+    button { padding: .5rem .75rem; cursor: pointer; }
+    table { border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: .5rem .75rem; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
+    .muted { color: #666; font-size: .9rem; }
+    .row-actions { display: flex; gap: .5rem; }
+  </style>
+</head>
+<body>
+  <h1>TODO</h1>
+
+  <section>
+    <h2>新規作成</h2>
+    <form th:action="@{/todos}" method="post" th:object="${form}">
+      <label>タイトル</label>
+      <input type="text" th:field="*{title}" placeholder="タイトル" required />
+      <div class="muted" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></div>
+
+      <label>詳細</label>
+      <textarea th:field="*{description}" placeholder="詳細"></textarea>
+
+      <label>期限</label>
+      <input type="date" th:field="*{dueDate}" />
+
+      <button type="submit">追加</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>一覧</h2>
+    <table>
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>タイトル/詳細</th>
+        <th>状態</th>
+        <th>期限</th>
+        <th>作成</th>
+        <th>更新</th>
+        <th>操作</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="t : ${todos}">
+        <td th:text="${t.id}">1</td>
+        <td>
+          <div th:text="${t.title}">タイトル</div>
+          <div class="muted" th:text="${t.description}">詳細</div>
+        </td>
+        <td th:text="${t.status}">OPEN</td>
+        <td th:text="${t.dueDate}">2025-01-01</td>
+        <td th:text="${t.createdAt}">2025-01-01T00:00:00</td>
+        <td th:text="${t.updatedAt}">2025-01-01T00:00:00</td>
+        <td class="row-actions">
+          <form th:action="@{'/todos/' + ${t.id} + '/complete'}" method="post">
+            <button type="submit" th:disabled="${t.status.name() == 'DONE'}">完了</button>
+          </form>
+          <form th:action="@{'/todos/' + ${t.id} + '/delete'}" method="post">
+            <button type="submit">削除</button>
+          </form>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </section>
+</body>
+</html> 

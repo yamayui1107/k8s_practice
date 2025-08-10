@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  labels:
+    app.kubernetes.io/name: todo-app
+    app.kubernetes.io/part-of: todo
+    app.kubernetes.io/component: config
+    app.kubernetes.io/managed-by: kustomize
+data:
+  DB_URL: "jdbc:mysql://mysql:3306/todo_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+  DB_USER: "root"
+  TZ: "Asia/Tokyo" 

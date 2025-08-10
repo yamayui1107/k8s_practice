@@ -1,0 +1,10 @@
+resources:
+  - config/app-config.yaml
+  - config/secret-db.yaml
+  - db/statefulset.yaml
+  - db/service.yaml
+  - app/deployment.yaml
+  - app/service.yaml
+  - web/deployment.yaml
+  - web/service.yaml
+  - ingress/ingress.yaml 
