@@ -1,6 +1,6 @@
 resources:
+  - namespace.yaml
   - config/app-config.yaml
-  - config/secret-db.yaml
   - db/statefulset.yaml
   - db/service.yaml
   - app/deployment.yaml

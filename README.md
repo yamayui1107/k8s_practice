@@ -63,7 +63,20 @@ docker push ghcr.io/$USER/todo-web:latest
 ```
 
 ## Kubernetes へデプロイ（ローカルクラスタ想定）
-1) イメージ参照を GHCR に切替（overlays/dev）
+1) Ingress Controllerをインストール（Ingressを使用する場合）
+```powershell
+# NGINX Ingress Controllerをインストール
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
+
+# インストール完了まで待機
+kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s
+
+# インストール確認
+kubectl get pods -n ingress-nginx
+kubectl get ingressclass
+```
+
+2) イメージ参照を GHCR に切替（overlays/dev）
 `deploy/k8s/overlays/dev/kustomization.yaml` の `images` を編集
 ```yaml
 images:
@@ -74,7 +87,7 @@ images:
     newName: ghcr.io/your-github-username/todo-web
     newTag: latest
 ```
-2) （GHCRがプライベートの場合のみ）Pull Secret を作成し、Deployment に紐づけ
+3) （GHCRがプライベートの場合のみ）Pull Secret を作成し、Deployment に紐づけ
 ```powershell
 kubectl create namespace todo 2>$null | Out-Null
 kubectl create secret docker-registry ghcr-cred `
@@ -88,7 +101,7 @@ kubectl create secret docker-registry ghcr-cred `
 imagePullSecrets:
   - name: ghcr-cred
 ```
-3) デプロイ
+4) デプロイ
 ```powershell
 # 既定で overlays/dev を参照
 tkubectl apply -k deploy/k8s
@@ -101,10 +114,10 @@ kubectl -n todo get pods,svc
 kubectl -n todo port-forward svc/web 8080:80
 # → http://localhost:8080
 ```
-- Ingressを使う場合
-  - ローカルに Ingress Controller（ingress-nginx 等）を導入
-  - `deploy/k8s/base/ingress/ingress.yaml` の `host` を適切な値へ
-  - hosts ファイルで `todo.example.com` を 127.0.0.1 に向ける
+- Ingressを使う場合（Ingress Controllerインストール後）
+  - `kubectl get ingress -n todo` でADDRESSを確認
+  - ブラウザで http://localhost にアクセス（80ポート）
+  - または、`/etc/hosts`（Windows: `C:\Windows\System32\drivers\etc\hosts`）で `todo.example.com` を 127.0.0.1 に向ける
 
 ## トラブルシュート
 - ImagePullBackOff（イメージ取得失敗）
@@ -113,7 +126,8 @@ kubectl -n todo port-forward svc/web 8080:80
 - PVC が Pending
   - クラスタにデフォルト StorageClass が無い → 追加または明示指定
 - Ingress が効かない
-  - Ingress Controller 未導入 → `port-forward` を利用するか、Service を NodePort に変更
+  - Ingress Controller 未導入 → 上記の「Ingress Controllerをインストール」手順を実行
+  - または、`port-forward` を利用するか、Service を NodePort に変更
 - 既存の 3306/8080 が使用中（Docker Compose）
   - `docker-compose.yml` のポートを変更
 
