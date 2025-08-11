@@ -18,8 +18,10 @@ patches:
         value: 1
 images:
   - name: ghcr.io/yamayui1107/todo-app
+    newName: ghcr.io/yamayui110/todo-app
     newTag: ""
   - name: ghcr.io/yamayui1107/todo-web
+    newName: ghcr.io/yamayui110/todo-web
     newTag: ""
 generatorOptions:
   disableNameSuffixHash: true
