@@ -37,8 +37,10 @@ images:
   - name: ghcr.io/yamayui1107/todo-web
     newName: ghcr.io/yamayui1107/todo-web
     newTag: "sha-a379a31"
+
 generatorOptions:
   disableNameSuffixHash: true
+
 configMapGenerator:
   - name: app-props
     behavior: replace
