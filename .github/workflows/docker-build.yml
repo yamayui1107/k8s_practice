@@ -84,7 +84,11 @@ jobs:
         run: |
           SHORT_SHA=${GITHUB_SHA::7}
           echo "SHORT_SHA=$SHORT_SHA"
-          sed -i "s/newTag: .*/newTag: $SHORT_SHA/" deploy/k8s/overlays/dev/kustomization.yaml
+          curl -sSL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+          yq -i \
+            '(.images[] | select(.name=="your-registry/todo-app")).newTag = strenv(SHORT_SHA) | (.images[] | select(.name=="your-registry/todo-web")).newTag = strenv(SHORT_SHA)' \
+            deploy/k8s/overlays/dev/kustomization.yaml
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
           git add deploy/k8s/overlays/dev/kustomization.yaml
