@@ -1,8 +1,4 @@
 namespace: todo
 resources:
   - overlays/dev
-
-# 任意: 手元/環境で用意したSecretマニフェストを読み込む場合はコメントアウトを外してください
-# resources:
-#   - overlays/dev
   - secrets/db-secret.yaml 
