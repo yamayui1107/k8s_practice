@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: your-registry/todo-app:latest
+          image: ghcr.io/yamayui1107/todo-app:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

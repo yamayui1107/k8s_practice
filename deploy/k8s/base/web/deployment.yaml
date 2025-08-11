@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: your-registry/todo-web:latest
+          image: ghcr.io/yamayui1107/todo-web:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
