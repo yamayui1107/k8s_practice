@@ -67,6 +67,18 @@ jobs:
             type=sha,priority=600
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
+      - name: Build and push web image
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/web
+          file: docker/web/Dockerfile
+          push: true
+          tags: ${{ steps.meta_web.outputs.tags }}
+          labels: ${{ steps.meta_web.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          
       - name: Update Kustomize newTag (dev)
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         run: |
