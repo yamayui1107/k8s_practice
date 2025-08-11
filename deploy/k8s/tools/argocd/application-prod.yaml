@@ -1,17 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: todo-dev
+  name: todo-prod
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/yamayui1107/k8s_practice.git
-    targetRevision: develop
-    path: deploy/k8s/overlays/dev
+    targetRevision: main
+    path: deploy/k8s/overlays/prod
   destination:
     server: https://kubernetes.default.svc
-    namespace: todo-dev
+    namespace: todo-prod
   syncPolicy:
     automated:
       prune: true

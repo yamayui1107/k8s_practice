@@ -1,4 +1,4 @@
-namespace: todo
+namespace: todo-prod
 resources:
   - ../../base
 patches:
@@ -16,6 +16,20 @@ patches:
       - op: replace
         path: /spec/replicas
         value: 3
+  - target:
+      kind: Namespace
+      name: todo
+    patch: |
+      - op: replace
+        path: /metadata/name
+        value: todo-prod
+  - target:
+      kind: Ingress
+      name: web
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: todo.example.com
 images:
   - name: your-registry/todo-app
     newName: your-registry/todo-app

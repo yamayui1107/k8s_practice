@@ -2,7 +2,7 @@ name: Build and push Docker images
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "dev","main" ]
     paths:
       - 'docker/**'
       - 'src/**'
@@ -78,7 +78,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
-          
+
       - name: Update Kustomize newTag (dev)
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         run: |
