@@ -22,7 +22,7 @@ images:
     newTag: "sha-ad4983a"
   - name: ghcr.io/yamayui1107/todo-web
     newName: ghcr.io/yamayui1107/todo-web
-    newTag: "sha-ad4983a"
+    newTag: "sha-9b58bad"
 generatorOptions:
   disableNameSuffixHash: true
 configMapGenerator:
