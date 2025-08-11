@@ -79,40 +79,50 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
-      - name: Update Kustomize newTag (dev)
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+      - name: Update Kustomize newTag (dev/prod)
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         run: |
           set -e
           OWNER=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           APP="ghcr.io/${OWNER}/todo-app"
           WEB="ghcr.io/${OWNER}/todo-web"
 
-          # 実際にpushされたタグから優先的に決定（web→appの順で抽出）。無ければshort SHA / vタグにフォールバック
+          # 実際にpushされたタグから優先抽出（web→app）。無ければ short SHA / vタグ
           IMAGE_TAG=$(echo "${{ steps.meta_web.outputs.tags }}" | grep -o 'sha-[a-f0-9]\{7\}' | head -n1)
           [[ -z "$IMAGE_TAG" ]] && IMAGE_TAG=$(echo "${{ steps.meta_app.outputs.tags }}" | grep -o 'sha-[a-f0-9]\{7\}' | head -n1)
           if [[ -z "$IMAGE_TAG" ]]; then
-            if [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            if [[ "$GITHUB_REF" == refs/heads/main || "$GITHUB_REF" == refs/heads/develop ]]; then
               IMAGE_TAG="sha-${GITHUB_SHA::7}"
             else
               IMAGE_TAG="${GITHUB_REF_NAME}"  # 例: v1.2.3
             fi
           fi
 
-          export OWNER APP WEB IMAGE_TAG
+          # ブランチに応じて書換対象の overlay を切替
+          if [[ "$GITHUB_REF" == 'refs/heads/develop' ]]; then
+            KUSTOMIZE_PATH="deploy/k8s/overlays/dev"
+          elif [[ "$GITHUB_REF" == 'refs/heads/main' || "$GITHUB_REF" == refs/tags/* ]]; then
+            KUSTOMIZE_PATH="deploy/k8s/overlays/prod"
+          else
+            echo "unsupported ref: $GITHUB_REF"; exit 1
+          fi
+
+          export OWNER APP WEB IMAGE_TAG KUSTOMIZE_PATH
 
           curl -sSL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o /usr/local/bin/yq
           chmod +x /usr/local/bin/yq
 
+          # prod 側が your-registry/... でもヒットするように両名義を対象に更新
           /usr/local/bin/yq -i '
-            (.images[] | select(.name==env(APP))).newTag = strenv(IMAGE_TAG) |
-            (.images[] | select(.name==env(WEB))).newTag = strenv(IMAGE_TAG)
-          ' deploy/k8s/overlays/dev/kustomization.yaml
+            (.images[] | select(.name==env(APP) or .name=="your-registry/todo-app")).newTag = strenv(IMAGE_TAG) |
+            (.images[] | select(.name==env(WEB) or .name=="your-registry/todo-web")).newTag = strenv(IMAGE_TAG)
+          ' ${KUSTOMIZE_PATH}/kustomization.yaml
 
-          echo "==== after update ===="
-          grep -nE 'name:|newTag:' deploy/k8s/overlays/dev/kustomization.yaml || true
+          echo "==== after update (${KUSTOMIZE_PATH}) ===="
+          grep -nE 'name:|newTag:' ${KUSTOMIZE_PATH}/kustomization.yaml || true
 
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
-          git add deploy/k8s/overlays/dev/kustomization.yaml || true
-          git diff --cached --quiet && echo "no changes" || git commit -m "ci: update dev newTag to ${IMAGE_TAG}"
+          git add ${KUSTOMIZE_PATH}/kustomization.yaml || true
+          git diff --cached --quiet && echo "no changes" || git commit -m "ci: update $(basename ${KUSTOMIZE_PATH}) newTag to ${IMAGE_TAG}"
           git push || true
