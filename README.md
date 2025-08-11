@@ -132,6 +132,35 @@ kubectl get namespaces
 kubectl get pods --all-namespaces
 ```
 
+## Kubernetes ダッシュボード（管理画面）
+Docker Desktop のローカルクラスタでダッシュボードを利用する手順です（学習/検証用途）。本番では限定RBACを推奨。
+
+```powershell
+# 1) Dashboard をインストール（公式推奨マニフェスト）
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+
+# 2) 管理者アカウントを作成（ローカル用途）
+kubectl apply -f deploy/k8s/tools/dashboard/admin-user.yaml
+
+# 3) ログイン用トークンを取得（Kubernetes 1.24+）
+kubectl -n kubernetes-dashboard create token admin-user
+
+# 4-A) proxy経由でアクセス（推奨）
+kubectl proxy
+# ブラウザで以下にアクセス
+# http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
+
+# 4-B) 直接ポートフォワード（自己署名証明書の警告は許可）
+kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard 8443:443
+# ブラウザ: https://localhost:8443/
+```
+- 備考: 生成したトークンを「Sign in with token」で貼り付けます。
+- セキュリティ: `admin-user` は強い権限です。検証後は削除を推奨します。
+
+```powershell
+kubectl delete -f deploy/k8s/tools/dashboard/admin-user.yaml
+```
+
 ## トラブルシュート
 - ImagePullBackOff（イメージ取得失敗）
   - GHCR がプライベート → Pull Secret（`ghcr-cred`）を作成し `imagePullSecrets` を設定
