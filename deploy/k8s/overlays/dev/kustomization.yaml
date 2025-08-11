@@ -19,16 +19,14 @@ patches:
 images:
   - name: your-registry/todo-app
     newName: ghcr.io/yamayui1107/todo-app
-    newTag: d168de1
+    newTag: ""
   - name: your-registry/todo-web
     newName: ghcr.io/yamayui1107/todo-web
-    newTag: d168de1
-
+    newTag: ""
 generatorOptions:
   disableNameSuffixHash: true
-
 configMapGenerator:
   - name: app-props
     behavior: replace
     files:
-      - application.properties=./application-dev.properties 
+      - application.properties=./application-dev.properties
