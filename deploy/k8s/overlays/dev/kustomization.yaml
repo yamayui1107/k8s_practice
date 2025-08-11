@@ -17,10 +17,10 @@ patches:
         path: /spec/replicas
         value: 1
 images:
-  - name: ghcr.io/yamayui1107/todo-app
+  - name: ghcr.io/yamayui1107/todo-app:sha-89c1f2c
     newName: ghcr.io/yamayui110/todo-app
     newTag: ""
-  - name: ghcr.io/yamayui1107/todo-web
+  - name: ghcr.io/yamayui1107/todo-web:sha-89c1f2c
     newName: ghcr.io/yamayui110/todo-web
     newTag: ""
 generatorOptions:
