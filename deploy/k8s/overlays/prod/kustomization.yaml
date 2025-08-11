@@ -33,14 +33,12 @@ patches:
 images:
   - name: ghcr.io/yamayui1107/todo-app
     newName: ghcr.io/yamayui1107/todo-app
-    newTag: "sha-a379a31"
+    newTag: "sha-a46ea8a"
   - name: ghcr.io/yamayui1107/todo-web
     newName: ghcr.io/yamayui1107/todo-web
-    newTag: "sha-a379a31"
-
+    newTag: "sha-a46ea8a"
 generatorOptions:
   disableNameSuffixHash: true
-
 configMapGenerator:
   - name: app-props
     behavior: replace
