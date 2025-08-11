@@ -23,10 +23,7 @@ images:
   - name: your-registry/todo-web
     newName: ghcr.io/yamayui1107/todo-web
     newTag: latest
-secretGenerator:
-  - name: db-secret
-    envs:
-      - secret.env
+
 generatorOptions:
   disableNameSuffixHash: true
 

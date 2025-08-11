@@ -103,9 +103,28 @@ imagePullSecrets:
 ```
 4) デプロイ
 ```powershell
+# Secret（必須）を先に作成（Git管理外）
+# - サンプル: deploy/k8s/secrets/db-secret.yaml.example をコピーして編集
+kubectl create namespace todo 2>$null | Out-Null
+kubectl apply -f deploy/k8s/secrets/db-secret.yaml
+
 # 既定で overlays/dev を参照
 kubectl apply -k deploy/k8s
 kubectl -n todo get pods,svc
+```
+
+### Argo CD を使った自動デプロイ（任意）
+```powershell
+# 1) Argo CD のインストール（ローカル）
+.\deploy\k8s\tools\argocd\install-argocd.ps1
+
+# 2) Argo CD Application を作成（mainブランチの overlays/dev を監視）
+# repoURL と path はあなたのリポジトリに合わせて編集してから適用
+kubectl apply -f deploy/k8s/tools/argocd/application-dev.yaml
+
+# 3) UI へアクセス
+# https://localhost:8444 にアクセスして admin / 初期パスワード でログイン
+# 右上の "SYNC" を有効化すると自動同期（detect & deploy）されます
 ```
 
 ## アクセス方法（ローカル）
@@ -158,7 +177,93 @@ kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard 8443:443
 - セキュリティ: `admin-user` は強い権限です。検証後は削除を推奨します。
 
 ```powershell
+# 管理者アカウントの削除（検証終了後）
 kubectl delete -f deploy/k8s/tools/dashboard/admin-user.yaml
+
+# ダッシュボード本体の削除（導入済みの場合）
+kubectl delete -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+```
+
+## Ubuntu サーバ（Minikube）+ Argo CD で自動デプロイ
+以下はUbuntuサーバ上での最小手順（bash）。既にCIでGHCRへイメージが発行される前提です。
+
+```bash
+# 1) Minikube インストール
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+# 2) Minikube 起動（Dockerドライバ推奨。無ければ --driver=none でroot実行）
+# Dockerドライバ例
+minikube start --driver=docker
+# もしくは root で
+# sudo minikube start --driver=none
+
+# 3) アドオン（Ingress）
+minikube addons enable ingress
+
+# 4) クラスタ確認
+kubectl get nodes
+kubectl get pods -A
+
+# 5) Argo CD インストール
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl -n argocd rollout status deploy/argocd-server -w
+
+# 6) 初期パスワード取得（ユーザ: admin）
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+
+# 7) アクセス（別端末でポートフォワード）
+kubectl -n argocd port-forward svc/argocd-server 8444:443
+# → https://<サーバIP>:8444 （admin / 上記パスワード）
+
+# 8) Application適用（repoURLを自分のリポジトリに編集してから）
+kubectl apply -f deploy/k8s/tools/argocd/application-dev.yaml
+kubectl -n argocd get applications.argoproj.io todo-dev
+```
+
+### GHCRがプライベートの場合
+```bash
+kubectl -n todo create secret docker-registry ghcr-cred \
+  --docker-server=ghcr.io \
+  --docker-username=<GitHubユーザ名> \
+  --docker-password=<GHCR_PAT>
+
+kubectl -n todo patch serviceaccount default \
+  -p '{"imagePullSecrets":[{"name":"ghcr-cred"}]}'
+```
+
+## Argo CD の初期パスワード
+- ユーザ名: admin
+- 取得コマンド
+  - Linux/macOS:
+    ```bash
+    kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+    ```
+  - Windows (PowerShell):
+    ```powershell
+    kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | % { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) }
+    ```
+- 初回ログイン後、UIからパスワード変更を推奨
+
+## クリーンアップ（ローカル/Ubuntu）
+```powershell
+# 1) アプリケーション削除（Argo CD管理対象）
+kubectl delete -f deploy/k8s/tools/argocd/application-dev.yaml
+
+# 2) Argo CD削除
+kubectl delete namespace argocd
+
+# 3) アプリ本体の削除（任意）
+kubectl delete -k deploy/k8s
+kubectl delete namespace todo
+
+# 4) NGINX Ingress Controllerを入れていた場合（任意）
+kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
+```
+- Ubuntuでk3s自体を削除（任意）
+```bash
+sudo /usr/local/bin/k3s-uninstall.sh
 ```
 
 ## トラブルシュート

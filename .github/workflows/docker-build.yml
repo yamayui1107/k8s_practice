@@ -19,7 +19,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - name: Checkout
@@ -77,4 +77,16 @@ jobs:
           labels: ${{ steps.meta_web.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64 
+          platforms: linux/amd64
+
+      - name: Update Kustomize newTag to latest SHA (dev)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          SHORT_SHA=${GITHUB_SHA::7}
+          echo "SHORT_SHA=$SHORT_SHA"
+          sed -i "s/newTag: .*/newTag: $SHORT_SHA/" deploy/k8s/overlays/dev/kustomization.yaml
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add deploy/k8s/overlays/dev/kustomization.yaml
+          git commit -m "ci: update dev newTag to $SHORT_SHA"
+          git push 

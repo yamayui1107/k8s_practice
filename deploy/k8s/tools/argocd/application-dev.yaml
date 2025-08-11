@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: todo-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/yamayui1107/k8s_practice.git
+    targetRevision: main
+    path: deploy/k8s/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: todo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true 

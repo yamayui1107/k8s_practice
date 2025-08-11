@@ -23,10 +23,7 @@ images:
   - name: your-registry/todo-web
     newName: your-registry/todo-web
     newTag: v1.0.0
-secretGenerator:
-  - name: db-secret
-    envs:
-      - secret.env
+
 generatorOptions:
   disableNameSuffixHash: true
 
