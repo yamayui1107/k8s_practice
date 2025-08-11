@@ -1,4 +1,4 @@
-namespace: todo
+namespace: todo-dev
 resources:
   - ../../base
 patches:
@@ -16,13 +16,27 @@ patches:
       - op: replace
         path: /spec/replicas
         value: 1
+  - target:
+      kind: Namespace
+      name: todo
+    patch: |
+      - op: replace
+        path: /metadata/name
+        value: todo-dev
+  - target:
+      kind: Ingress
+      name: web
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: dev.todo.example.com
 images:
   - name: ghcr.io/yamayui1107/todo-app
     newName: ghcr.io/yamayui1107/todo-app
-    newTag: "sha-a379a31"
+    newTag: "sha-bdfd633"
   - name: ghcr.io/yamayui1107/todo-web
     newName: ghcr.io/yamayui1107/todo-web
-    newTag: "sha-a379a31"
+    newTag: "sha-bdfd633"
 generatorOptions:
   disableNameSuffixHash: true
 configMapGenerator:

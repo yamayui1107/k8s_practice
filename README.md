@@ -89,12 +89,12 @@ images:
 ```
 3) （GHCRがプライベートの場合のみ）Pull Secret を作成し、Deployment に紐づけ
 ```powershell
-kubectl create namespace todo 2>$null | Out-Null
+kubectl create namespace todo-dev 2>$null | Out-Null
 kubectl create secret docker-registry ghcr-cred `
   --docker-server=ghcr.io `
   --docker-username=$USER `
   --docker-password=$TOKEN `
-  -n todo
+  -n todo-dev
 ```
 `deploy/k8s/base/app/deployment.yaml` と `base/web/deployment.yaml` に以下を追記（spec.template.spec 配下）
 ```yaml
@@ -108,9 +108,13 @@ imagePullSecrets:
 kubectl create namespace todo 2>$null | Out-Null
 kubectl apply -f deploy/k8s/secrets/db-secret.yaml
 
-# 既定で overlays/dev を参照
+# 既定で overlays/dev を参照（検証環境）
 kubectl apply -k deploy/k8s
-kubectl -n todo get pods,svc
+kubectl -n todo-dev get pods,svc
+
+# 本番環境（overlays/prod）
+kubectl apply -k deploy/k8s/overlays/prod
+kubectl -n todo-prod get pods,svc
 ```
 
 ### Argo CD を使った自動デプロイ（任意）
@@ -130,7 +134,18 @@ kubectl apply -f deploy/k8s/tools/argocd/application-dev.yaml
 ## アクセス方法（ローカル）
 - 手軽に確認（port-forward）
 ```powershell
-kubectl -n todo port-forward svc/web 8080:80
+# 検証環境
+a) Ingressを使う場合（hostsに dev.todo.example.com → 127.0.0.1 を追加）
+# → http://dev.todo.example.com
+b) 手軽に確認（port-forward）
+kubectl -n todo-dev port-forward svc/web 8080:80
+# → http://localhost:8080
+
+# 本番環境
+a) Ingress（hostsに todo.example.com → 127.0.0.1 を追加）
+# → http://todo.example.com
+b) port-forward（必要時）
+kubectl -n todo-prod port-forward svc/web 8080:80
 # → http://localhost:8080
 ```
 - Ingressを使う場合（Ingress Controllerインストール後）
@@ -141,7 +156,13 @@ kubectl -n todo port-forward svc/web 8080:80
 ## クラスタの削除
 ```powershell
 # アプリケーションの削除
-kubectl delete -k deploy/k8s
+# 検証環境の削除
+yes | kubectl delete -k deploy/k8s
+kubectl delete namespace todo-dev
+
+# 本番環境の削除（必要に応じて）
+yes | kubectl delete -k deploy/k8s/overlays/prod
+kubectl delete namespace todo-prod
 
 # Ingress Controllerの削除（必要に応じて）
 kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml

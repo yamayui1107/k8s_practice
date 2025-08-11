@@ -1,4 +1,4 @@
-namespace: todo
+namespace: todo-prod
 resources:
   - ../../base
 patches:
@@ -16,13 +16,27 @@ patches:
       - op: replace
         path: /spec/replicas
         value: 3
+  - target:
+      kind: Namespace
+      name: todo
+    patch: |
+      - op: replace
+        path: /metadata/name
+        value: todo-prod
+  - target:
+      kind: Ingress
+      name: web
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: todo.example.com
 images:
-  - name: your-registry/todo-app
-    newName: your-registry/todo-app
-    newTag: v1.0.0
-  - name: your-registry/todo-web
-    newName: your-registry/todo-web
-    newTag: v1.0.0
+  - name: ghcr.io/yamayui1107/todo-app
+    newName: ghcr.io/yamayui1107/todo-app
+    newTag: "sha-a379a31"
+  - name: ghcr.io/yamayui1107/todo-web
+    newName: ghcr.io/yamayui1107/todo-web
+    newTag: "sha-a379a31"
 
 generatorOptions:
   disableNameSuffixHash: true
@@ -31,4 +45,4 @@ configMapGenerator:
   - name: app-props
     behavior: replace
     files:
-      - application.properties=./application-prod.properties 
+      - application.properties=./application-prod.properties
