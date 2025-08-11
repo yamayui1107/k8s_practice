@@ -19,10 +19,10 @@ patches:
 images:
   - name: ghcr.io/yamayui1107/todo-app
     newName: ghcr.io/yamayui1107/todo-app
-    newTag: ""
+    newTag: "sha-31d5dbf"
   - name: ghcr.io/yamayui1107/todo-web
     newName: ghcr.io/yamayui1107/todo-web
-    newTag: ""
+    newTag: "sha-31d5dbf"
 generatorOptions:
   disableNameSuffixHash: true
 configMapGenerator:
