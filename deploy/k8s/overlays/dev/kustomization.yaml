@@ -19,10 +19,10 @@ patches:
 images:
   - name: your-registry/todo-app
     newName: ghcr.io/yamayui1107/todo-app
-    newTag: d027c5e
+    newTag: d168de1
   - name: your-registry/todo-web
     newName: ghcr.io/yamayui1107/todo-web
-    newTag: d027c5e
+    newTag: d168de1
 
 generatorOptions:
   disableNameSuffixHash: true
