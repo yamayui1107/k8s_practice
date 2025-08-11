@@ -17,12 +17,11 @@ patches:
         path: /spec/replicas
         value: 1
 images:
-  - name: your-registry/todo-app
-    newName: ghcr.io/yamayui1107/todo-app
-    newTag: ""
-  - name: your-registry/todo-web
-    newName: ghcr.io/yamayui1107/todo-web
-    newTag: ""
+  - name: ghcr.io/yamayui1107/todo-app
+    newTag: latest
+  - name: ghcr.io/yamayui1107/todo-web
+    newTag: latest
+
 generatorOptions:
   disableNameSuffixHash: true
 configMapGenerator:
