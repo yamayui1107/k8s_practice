@@ -18,10 +18,9 @@ patches:
         value: 1
 images:
   - name: ghcr.io/yamayui1107/todo-app
-    newTag: latest
+    newTag: ""
   - name: ghcr.io/yamayui1107/todo-web
-    newTag: latest
-
+    newTag: ""
 generatorOptions:
   disableNameSuffixHash: true
 configMapGenerator:
