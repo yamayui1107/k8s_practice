@@ -79,34 +79,34 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
-- name: Update Kustomize newTag (dev)
-  if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-  run: |
-    set -e
-    OWNER=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
-    APP="ghcr.io/${OWNER}/todo-app"
-    WEB="ghcr.io/${OWNER}/todo-web"
+      - name: Update Kustomize newTag (dev)
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -e
+          OWNER=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          APP="ghcr.io/${OWNER}/todo-app"
+          WEB="ghcr.io/${OWNER}/todo-web"
 
-    if [[ "$GITHUB_REF" == refs/heads/main ]]; then
-      IMAGE_TAG="sha-${GITHUB_SHA::7}"
-    else
-      IMAGE_TAG="${GITHUB_REF_NAME}"   # v1.2.3 など
-    fi
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            IMAGE_TAG="sha-${GITHUB_SHA::7}"
+          else
+            IMAGE_TAG="${GITHUB_REF_NAME}"   # v1.2.3 など
+          fi
 
-    curl -sSL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o ./yq
-    chmod +x ./yq
+          curl -sSL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o ./yq
+          chmod +x ./yq
 
-    ./yq '.images[] | .name' deploy/k8s/overlays/dev/kustomization.yaml || true
-    ./yq -i '
-      (.images[] | select(.name==env(APP))).newTag = strenv(IMAGE_TAG) |
-      (.images[] | select(.name==env(WEB))).newTag = strenv(IMAGE_TAG)
-    ' deploy/k8s/overlays/dev/kustomization.yaml
+          ./yq '.images[] | .name' deploy/k8s/overlays/dev/kustomization.yaml || true
+          ./yq -i '
+            (.images[] | select(.name==env(APP))).newTag = strenv(IMAGE_TAG) |
+            (.images[] | select(.name==env(WEB))).newTag = strenv(IMAGE_TAG)
+          ' deploy/k8s/overlays/dev/kustomization.yaml
 
-    echo "==== after update ===="
-    grep -nE 'name:|newTag:' deploy/k8s/overlays/dev/kustomization.yaml || true
+          echo "==== after update ===="
+          grep -nE 'name:|newTag:' deploy/k8s/overlays/dev/kustomization.yaml || true
 
-    git config user.name "github-actions"
-    git config user.email "github-actions@users.noreply.github.com"
-    git add deploy/k8s/overlays/dev/kustomization.yaml || true
-    git diff --cached --quiet && echo "no changes" || git commit -m "ci: update dev newTag to ${IMAGE_TAG}"
-    git push || true
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add deploy/k8s/overlays/dev/kustomization.yaml || true
+          git diff --cached --quiet && echo "no changes" || git commit -m "ci: update dev newTag to ${IMAGE_TAG}"
+          git push || true
