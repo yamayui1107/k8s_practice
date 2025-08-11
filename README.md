@@ -104,7 +104,7 @@ imagePullSecrets:
 4) デプロイ
 ```powershell
 # 既定で overlays/dev を参照
-tkubectl apply -k deploy/k8s
+kubectl apply -k deploy/k8s
 kubectl -n todo get pods,svc
 ```
 
@@ -118,6 +118,19 @@ kubectl -n todo port-forward svc/web 8080:80
   - `kubectl get ingress -n todo` でADDRESSを確認
   - ブラウザで http://localhost にアクセス（80ポート）
   - または、`/etc/hosts`（Windows: `C:\Windows\System32\drivers\etc\hosts`）で `todo.example.com` を 127.0.0.1 に向ける
+
+## クラスタの削除
+```powershell
+# アプリケーションの削除
+kubectl delete -k deploy/k8s
+
+# Ingress Controllerの削除（必要に応じて）
+kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
+
+# 確認
+kubectl get namespaces
+kubectl get pods --all-namespaces
+```
 
 ## トラブルシュート
 - ImagePullBackOff（イメージ取得失敗）
