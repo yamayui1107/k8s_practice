@@ -7,4 +7,12 @@ resources:
   - app/service.yaml
   - web/deployment.yaml
   - web/service.yaml
-  - ingress/ingress.yaml 
+  - ingress/ingress.yaml
+
+configMapGenerator:
+  - name: app-props
+    files:
+      - application.properties=./config/application.properties
+
+generatorOptions:
+  disableNameSuffixHash: true 

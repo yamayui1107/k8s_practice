@@ -47,4 +47,15 @@ spec:
               memory: "256Mi"
             limits:
               cpu: "500m"
-              memory: "512Mi" 
+              memory: "512Mi"
+          volumeMounts:
+            - name: app-props
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: app-props
+          configMap:
+            name: app-props
+            items:
+              - key: application.properties
+                path: application.properties 

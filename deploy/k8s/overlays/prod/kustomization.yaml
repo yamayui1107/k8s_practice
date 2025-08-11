@@ -28,4 +28,10 @@ secretGenerator:
     envs:
       - secret.env
 generatorOptions:
-  disableNameSuffixHash: true 
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: app-props
+    behavior: replace
+    files:
+      - application.properties=./application-prod.properties 
