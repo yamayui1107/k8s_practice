@@ -33,10 +33,10 @@ patches:
 images:
   - name: ghcr.io/yamayui1107/todo-app
     newName: ghcr.io/yamayui1107/todo-app
-    newTag: "sha-bdfd633"
+    newTag: "sha-738a215"
   - name: ghcr.io/yamayui1107/todo-web
     newName: ghcr.io/yamayui1107/todo-web
-    newTag: "sha-bdfd633"
+    newTag: "sha-738a215"
 generatorOptions:
   disableNameSuffixHash: true
 configMapGenerator:
