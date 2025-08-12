@@ -112,11 +112,6 @@ kubectl apply -f deploy/k8s/secrets/db-secret.yaml
 kubectl apply -k deploy/k8s
 kubectl -n todo-dev get pods,svc
 
-# 本番環境（overlays/prod）
-kubectl apply -k deploy/k8s/overlays/prod
-kubectl -n todo-prod get pods,svc
-```
-
 ### Argo CD を使った自動デプロイ（任意）
 ```powershell
 # 1) Argo CD のインストール（ローカル）
@@ -153,26 +148,8 @@ kubectl -n todo-prod port-forward svc/web 8080:80
   - ブラウザで http://localhost にアクセス（80ポート）
   - または、`/etc/hosts`（Windows: `C:\Windows\System32\drivers\etc\hosts`）で `todo.example.com` を 127.0.0.1 に向ける
 
-## クラスタの削除
-```powershell
-# アプリケーションの削除
-# 検証環境の削除
-yes | kubectl delete -k deploy/k8s
-kubectl delete namespace todo-dev
 
-# 本番環境の削除（必要に応じて）
-yes | kubectl delete -k deploy/k8s/overlays/prod
-kubectl delete namespace todo-prod
-
-# Ingress Controllerの削除（必要に応じて）
-kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
-
-# 確認
-kubectl get namespaces
-kubectl get pods --all-namespaces
-```
-
-## Kubernetes ダッシュボード（管理画面）
+## Kubernetes ダッシュボードの導入（管理画面）
 Docker Desktop のローカルクラスタでダッシュボードを利用する手順です（学習/検証用途）。本番では限定RBACを推奨。
 
 ```powershell
@@ -205,69 +182,7 @@ kubectl delete -f deploy/k8s/tools/dashboard/admin-user.yaml
 kubectl delete -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
 ```
 
-## Ubuntu サーバ（Minikube）+ Argo CD で自動デプロイ
-以下はUbuntuサーバ上での最小手順（bash）。既にCIでGHCRへイメージが発行される前提です。
-
-```bash
-# 1) Minikube インストール
-curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-sudo install minikube-linux-amd64 /usr/local/bin/minikube
-
-# 2) Minikube 起動（Dockerドライバ推奨。無ければ --driver=none でroot実行）
-# Dockerドライバ例
-minikube start --driver=docker
-# もしくは root で
-# sudo minikube start --driver=none
-
-# 3) アドオン（Ingress）
-minikube addons enable ingress
-
-# 4) クラスタ確認
-kubectl get nodes
-kubectl get pods -A
-
-# 5) Argo CD インストール
-kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-kubectl -n argocd rollout status deploy/argocd-server -w
-
-# 6) 初期パスワード取得（ユーザ: admin）
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
-
-# 7) アクセス（別端末でポートフォワード）
-kubectl -n argocd port-forward svc/argocd-server 8444:443
-# → https://<サーバIP>:8444 （admin / 上記パスワード）
-
-# 8) Application適用（repoURLを自分のリポジトリに編集してから）
-kubectl apply -f deploy/k8s/tools/argocd/application-dev.yaml
-kubectl -n argocd get applications.argoproj.io todo-dev
-```
-
-### GHCRがプライベートの場合
-```bash
-kubectl -n todo create secret docker-registry ghcr-cred \
-  --docker-server=ghcr.io \
-  --docker-username=<GitHubユーザ名> \
-  --docker-password=<GHCR_PAT>
-
-kubectl -n todo patch serviceaccount default \
-  -p '{"imagePullSecrets":[{"name":"ghcr-cred"}]}'
-```
-
-## Argo CD の初期パスワード
-- ユーザ名: admin
-- 取得コマンド
-  - Linux/macOS:
-    ```bash
-    kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
-    ```
-  - Windows (PowerShell):
-    ```powershell
-    kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | % { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) }
-    ```
-- 初回ログイン後、UIからパスワード変更を推奨
-
-## クリーンアップ（ローカル/Ubuntu）
+## クリーンアップ（ローカル）
 ```powershell
 # 1) アプリケーション削除（Argo CD管理対象）
 kubectl delete -f deploy/k8s/tools/argocd/application-dev.yaml
@@ -282,22 +197,412 @@ kubectl delete namespace todo
 # 4) NGINX Ingress Controllerを入れていた場合（任意）
 kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
 ```
-- Ubuntuでk3s自体を削除（任意）
+
+## Ubuntu サーバ（Minikube）+ Argo CD で自動デプロイ
+
+以下は Ubuntu サーバ上で Docker ドライバの Minikube を起動し、Argo CD で本リポジトリを自動デプロイする手順です。
+
+### 1) Docker Engine インストール
 ```bash
-sudo /usr/local/bin/k3s-uninstall.sh
+# Docker の GPG key とリポジトリ追加
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/keyrings/docker.asc > /dev/null
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Docker デーモンが未起動なら起動・自動起動化
+sudo systemctl enable --now docker
+
+docker --version
 ```
 
-## トラブルシュート
-- ImagePullBackOff（イメージ取得失敗）
-  - GHCR がプライベート → Pull Secret（`ghcr-cred`）を作成し `imagePullSecrets` を設定
-  - `images` の `newName/newTag` を確認
-- PVC が Pending
-  - クラスタにデフォルト StorageClass が無い → 追加または明示指定
-- Ingress が効かない
-  - Ingress Controller 未導入 → 上記の「Ingress Controllerをインストール」手順を実行
-  - または、`port-forward` を利用するか、Service を NodePort に変更
-- 既存の 3306/8080 が使用中（Docker Compose）
-  - `docker-compose.yml` のポートを変更
+### 2) kubectl インストール
+```bash
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl gnupg
 
----
-補足: Spring Boot は `schema.sql` により初回起動時にテーブルを自動作成します（DB 接続に成功している必要があります）。 
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list
+
+sudo apt-get update
+sudo apt-get install -y kubectl
+
+kubectl version --client=true
+```
+
+### 2.5) Git インストール（未導入なら）
+```bash
+sudo apt-get update && sudo apt-get install -y git
+```
+
+### 3) Minikube インストール
+```bash
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+minikube version
+```
+
+### 4)（任意）アプリ用ユーザ作成
+既存ユーザを利用する場合は本手順は不要です。以下は例として `k8s` ユーザを作成します。
+```bash
+sudo useradd -m k8s || true
+sudo passwd k8s
+sudo chsh -s /bin/bash k8s
+```
+
+### 5) k8s ユーザに権限付与（重要）
+`k8s` ユーザが Docker を操作できるように `docker` グループを付与します（必要なら `sudo` も）。この操作は管理者ユーザまたは root で実行してください。
+```bash
+# 管理者ユーザまたは root で実行
+sudo usermod -aG docker k8s
+# 任意: 管理用途で sudo 権限を付ける場合
+sudo usermod -aG sudo k8s
+
+# 反映（新しいセッションで）
+su - k8s
+newgrp docker
+
+# 確認（k8s ユーザで）
+id
+ls -l /var/run/docker.sock   # → root:docker かつ 660 が望ましい
+docker --version
+# 動作確認（任意）
+docker run --rm hello-world
+```
+
+### 6) Minikube 起動（Docker ドライバ）
+```bash
+# k8s ユーザで実行
+minikube start --driver=docker
+# （Docker が使えない場合のみ root で）
+# sudo minikube start --driver=none
+```
+
+### 7) アドオン（Ingress）
+```bash
+# MinikubeではアドオンでIngress Controllerを有効化（クラウド用のNGINXマニフェストは不要）
+minikube addons enable ingress
+minikube addons enable ingress-dns  # 任意（名前解決の検証に便利）
+```
+
+### 8) クラスタ確認
+```bash
+kubectl get nodes
+kubectl get pods -A
+```
+
+### 9) Argo CD インストールと初期設定
+```bash
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl -n argocd rollout status deploy/argocd-server -w
+
+# 初期パスワード（ユーザ: admin）
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+
+# アクセス（別端末でポートフォワード）
+kubectl -n argocd port-forward svc/argocd-server 8444:443
+# → ブラウザ: https://<サーバIP>:8444 （admin / 上記パスワード）
+```
+
+### リポジトリをクローンして prod をデプロイ（サーバ）
+```bash
+# リポジトリをクローン（自分のフォーク推奨）
+# 例: https://github.com/<OWNER>/<REPO>.git
+git clone https://github.com/yamayui1107/k8s_practice.git
+cd k8s_practice
+
+# [Argo CD 経由] アプリを Argo CD に登録（推奨）
+# 必要に応じて deploy/k8s/tools/argocd/application-prod.yaml の
+#   - spec.source.repoURL（あなたのリポジトリ URL）
+#   - spec.source.targetRevision（例: main）
+# を編集してから適用
+kubectl apply -f deploy/k8s/tools/argocd/application-prod.yaml
+kubectl -n argocd get applications.argoproj.io todo-prod
+```
+
+> 補足: `k8s` ユーザが sudoers に無い環境では、権限付与やサービス起動は管理者ユーザで実施してください。`k8s` で `sudo` 不可のままにする運用も可能です。
+
+### GHCR がプライベートの場合（prod）
+```bash
+kubectl -n todo-prod create secret docker-registry ghcr-cred \
+  --docker-server=ghcr.io \
+  --docker-username=<GitHubユーザ名> \
+  --docker-password=<GHCR_PAT>
+
+kubectl -n todo-prod patch serviceaccount default \
+  -p '{"imagePullSecrets":[{"name":"ghcr-cred"}]}'
+```
+
+### Minikube で prod を直接適用（Argo CD を使わない場合）
+必要に応じて `deploy/k8s/overlays/prod/kustomization.yaml` の `images` をあなたの GHCR に置き換えてください。
+```bash
+# リポジトリをクローン（未済なら）
+# 例: https://github.com/<OWNER>/<REPO>.git
+if [ ! -d k8s_practice ]; then
+  git clone https://github.com/yamayui1107/k8s_practice.git
+fi
+cd k8s_practice
+
+# Secret（必須）
+kubectl create namespace todo-prod 2>/dev/null || true
+
+# rootのDBパスワードを任意に設定（appは root/DB_PASSWORD を使用）
+export DBPASS='change-me-strong'
+
+kubectl -n todo-prod create secret generic db-secret \
+  --from-literal=MYSQL_ROOT_PASSWORD="$DBPASS" \
+  --from-literal=DB_PASSWORD="$DBPASS" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# 適用（prod オーバーレイを直接適用）
+kubectl apply -k deploy/k8s/overlays/prod
+kubectl -n todo-prod get pods,svc
+```
+
+### 初回 DB 初期化（prod / Ready にならない場合）
+prod では `spring.sql.init.mode=never` のため、自動でテーブルは作成されません。初回のみ、以下で `todos` テーブルを作成してください。
+```bash
+kubectl -n todo-prod exec -it mysql-0 -- bash -lc 'cat <<SQL | mysql -uroot -p"$MYSQL_ROOT_PASSWORD" todo_db
+CREATE TABLE IF NOT EXISTS todos (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  status VARCHAR(20) NOT NULL,
+  due_date DATE,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL
+);
+SQL'
+# 数十秒後に Ready を確認
+kubectl -n todo-prod get deploy
+```
+
+### VPS での Argo CD / アプリへのアクセス（安全な確認方法）
+公開せずに確認する場合は、VPS 上でポートフォワードし、手元PCから SSH トンネルでアクセスします。
+```bash
+# [VPS 側] Argo CD UI
+kubectl -n argocd port-forward svc/argocd-server 8444:443
+
+# [VPS 側] アプリ（web）
+kubectl -n todo-prod port-forward svc/web 8080:80
+```
+```bash
+# [手元PC] VPS への SSH トンネル（別端末）
+ssh -N -L 8444:localhost:8444 <user>@<VPS_IP>
+ssh -N -L 8080:localhost:8080 <user>@<VPS_IP>
+```
+- ブラウザ: `https://localhost:8444`（Argo CD UI）、`http://localhost:8080`（アプリ）
+- セキュリティ上、`--address 0.0.0.0` での直接公開は非推奨です。
+
+### 80番ポートでポートフォワードする場合の権限（Linux）
+Linux では 1024 未満のポートは特権が必要です。以下のいずれかを利用してください。
+
+- 方法1: `sudo` で実行（簡単）
+```bash
+sudo kubectl --kubeconfig=/home/k8s/.kube/config -n todo-prod port-forward --address 127.0.0.1 svc/web 80:80
+```
+  - `--kubeconfig` は環境に合わせて調整。
+
+- 方法2: `setcap` で `kubectl` に 80 番バインド権限付与（非 root 実行）
+```bash
+sudo apt-get update && sudo apt-get install -y libcap2-bin
+sudo setcap 'cap_net_bind_service=+ep' "$(readlink -f "$(which kubectl)")"
+
+# 以後は非 root で OK
+kubectl -n todo-prod port-forward --address 127.0.0.1 svc/web 80:80
+
+# 解除したい場合
+sudo setcap -r "$(readlink -f "$(which kubectl)")"
+```
+
+- 代替（簡易・安全）: VPS は 8080、手元だけ 80 にトンネル
+```bash
+# [VPS 側]
+kubectl -n todo-prod port-forward --address 127.0.0.1 svc/web 8080:80
+# [手元PC]
+ssh -N -L 80:localhost:8080 <user>@<VPS_IP>
+# → ブラウザ: http://localhost
+```
+> 注意: `--address 0.0.0.0` は外部公開になるため基本は使用しないでください。公開用途は Cloudflare Tunnel もしくはホスト nginx を推奨します。
+
+### 80番ポートで直接公開したい場合（Cloudflare を使わない構成）
+- Cloudflare Tunnel を使う場合は、VPS の 80 番ポートを公開する必要はありません（Tunnel 経由で到達）。
+- 直接 80 番で公開したい場合は、以下のいずれかが必要です。
+  - VPS のホストにリバースプロキシ（例: nginx）を設定し、`http://<MINIKUBE_IP>:<IngressのHTTP NodePort>` にプロキシ
+  - もしくは OS レベルのポート転送（iptables 等）で `80 -> <IngressのHTTP NodePort>` にリダイレクト
+- 参考（NodePort の取得）:
+```bash
+MINIKUBE_IP=$(minikube ip)
+HTTP_NODEPORT=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+echo $MINIKUBE_IP $HTTP_NODEPORT
+```
+- ドメインを使う場合は、`deploy/k8s/overlays/prod/kustomization.yaml` の Ingress `host` をドメイン名に変更し、DNS を VPS の IP に向けます。
+
+### VPS 上で Cloudflare Tunnel を使って公開（prod）
+
+前提:
+- `todo-example.xvps.jp` のようなサブドメインを Cloudflare で管理していること（DNS ゾーンを Cloudflare に移管済み）
+- prod の Ingress ホスト名をサブドメインに合わせる（恒久設定）
+
+1) Ingress のホスト名をサブドメインへ変更（恒久設定）
+- `deploy/k8s/overlays/prod/kustomization.yaml` の Ingress 置換を編集:
+```diff
+-       - op: replace
+-         path: /spec/rules/0/host
+-         value: todo.example.com
++       - op: replace
++         path: /spec/rules/0/host
++         value: todo-example.xvps.jp
+```
+- 反映:
+```bash
+kubectl apply -k deploy/k8s/overlays/prod
+kubectl -n todo-prod get ingress web -o wide
+```
+
+2) Minikube の Ingress を有効化（未実施なら）
+```bash
+minikube addons enable ingress
+kubectl -n ingress-nginx get pods
+```
+
+3) Cloudflare Tunnel（ホスト上に cloudflared を導入する簡易手順）
+```bash
+# インストール & 認証
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cf.deb
+sudo apt install -y ./cf.deb
+cloudflared tunnel login
+
+# トンネルを作成
+cloudflared tunnel create todo
+# トンネルIDを控える
+cloudflared tunnel list
+
+# サブドメインにDNSルートを作成
+cloudflared tunnel route dns todo todo-example.xvps.jp
+
+# Ingress(NGINX) の NodePort を取得
+MINIKUBE_IP=$(minikube ip)
+HTTP_NODEPORT=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+echo $MINIKUBE_IP $HTTP_NODEPORT
+
+# 設定ファイルを作成（~/.cloudflared/config.yml）
+mkdir -p ~/.cloudflared
+cat > ~/.cloudflared/config.yml <<EOF
+tunnel: $(cloudflared tunnel list | awk '/todo/{print $1; exit}')
+credentials-file: $HOME/.cloudflared/$(cloudflared tunnel list | awk '/todo/{print $1; exit}').json
+ingress:
+  - hostname: todo-example.xvps.jp
+    service: http://$MINIKUBE_IP:$HTTP_NODEPORT
+  - service: http_status:404
+EOF
+
+# 起動（ターミナルで前面実行。常駐化は systemd 等を利用）
+cloudflared tunnel run
+```
+- 確認:
+```bash
+curl -I http://todo-example.xvps.jp/
+# 302 → /todos リダイレクトが返ればOK
+```
+
+4) （運用向け）Cloudflare Tunnel をクラスタ内にデプロイする方法
+- PC で `cloudflared tunnel login` → `cloudflared tunnel create todo` 実行し、<トンネルID>.json（認証ファイル）を取得
+- K8s に Secret/ConfigMap/Deployment を作成
+```bash
+TUNNEL_ID=<作成したトンネルID>
+# 認証ファイルを Secret として投入
+kubectl -n todo-prod create secret generic cloudflared-credentials \
+  --from-file=credentials.json=$TUNNEL_ID.json
+
+# ConfigMap（cloudflared 設定）
+cat <<'YAML' | kubectl -n todo-prod apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+data:
+  config.yaml: |
+    tunnel: TUNNEL_ID_REPLACE
+    credentials-file: /etc/cloudflared/credentials.json
+    ingress:
+      - hostname: todo-example.xvps.jp
+        service: http://ingress-nginx-controller.ingress-nginx.svc.cluster.local:80
+      - service: http_status:404
+YAML
+kubectl -n todo-prod get cm cloudflared-config -o yaml | sed -n '1,160p'
+
+# Deployment（cloudflared）
+cat <<'YAML' | kubectl -n todo-prod apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:latest
+          args: ["tunnel","--config","/etc/cloudflared/config.yaml","run"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/cloudflared
+            - name: creds
+              mountPath: /etc/cloudflared/credentials.json
+              subPath: credentials.json
+      volumes:
+        - name: config
+          configMap:
+            name: cloudflared-config
+            items:
+              - key: config.yaml
+                path: config.yaml
+        - name: creds
+          secret:
+            secretName: cloudflared-credentials
+YAML
+
+# TUNNEL_ID を ConfigMap に反映（置換）
+kubectl -n todo-prod get cm cloudflared-config -o go-template='{{index .data "config.yaml"}}' \
+ | sed "s/TUNNEL_ID_REPLACE/$TUNNEL_ID/g" \
+ | kubectl -n todo-prod create configmap cloudflared-config --from-file=config.yaml=/dev/stdin -o yaml --dry-run=client | kubectl apply -f -
+
+# デプロイ確認
+kubectl -n todo-prod rollout status deploy/cloudflared
+```
+- これで `todo-example.xvps.jp` → Cloudflare → Tunnel → `ingress-nginx-controller:80` → Ingress → `web` へ到達します。NodePort やホストNginxは不要です。
+
+注意:
+- Ingress の `host` は `todo-example.xvps.jp` に合わせてください。
+- Cloudflare ダッシュボードで HTTPS を有効化できます（Flexible / Full は用途に応じて選択）。
+
+### クリーンアップ（Ubuntu / prod）
+```bash
+# Argo CD 管理のアプリ削除
+kubectl delete -f deploy/k8s/tools/argocd/application-prod.yaml
+
+# 任意: Argo CD 自体を削除
+kubectl delete namespace argocd
+
+# 任意: アプリのネームスペース（prod）を削除
+kubectl delete namespace todo-prod
+```
